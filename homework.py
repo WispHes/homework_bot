@@ -78,6 +78,7 @@ def get_api_answer(current_timestamp):
         raise KeyError('Ошибка статус кода')
     else:
         logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
+        print(homework_statuses.json())
         return homework_statuses.json()
 
 
@@ -147,10 +148,10 @@ def main():
     logger.info('Запущен телеграмм бот')
     current_timestamp = int(time.time())
     try_status = 'approved'
-    response = get_api_answer(current_timestamp)
-    homeworks = check_response(response)
     while True:
         try:
+            response = get_api_answer(current_timestamp)
+            homeworks = check_response(response)
             if homeworks.get('status') != try_status:
                 message = parse_status(homeworks)
                 send_message(bot, message)
