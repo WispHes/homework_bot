@@ -1,8 +1,10 @@
 import logging
 import os
-import requests
 import time
+import sys
+
 import telegram
+import requests
 
 from dotenv import load_dotenv
 
@@ -19,7 +21,7 @@ ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
-HOMEWORK_STATUSES = {
+HOMEWORK_VERDICT = {
     'approved': 'Работа проверена: ревьюеру всё понравилось. Ура!',
     'reviewing': 'Работа взята на проверку ревьюером.',
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
@@ -68,7 +70,6 @@ def get_api_answer(current_timestamp):
     """Делает запрос к эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-    # Нужно отнять от времени для получения последней работы - 2229743
     homework_statuses = requests.get(
         ENDPOINT,
         headers=HEADERS,
@@ -78,7 +79,6 @@ def get_api_answer(current_timestamp):
         raise KeyError('Ошибка статус кода')
     else:
         logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
-        print(homework_statuses.json())
         return homework_statuses.json()
 
 
@@ -117,21 +117,17 @@ def parse_status(homework):
     if isinstance(homework, dict):
         homework_name = homework.get('homework_name')
         homework_status = homework.get('status')
-        if homework_status not in HOMEWORK_STATUSES:
+        if homework_status not in HOMEWORK_VERDICT:
             raise NegativeResponseStatus(
                 logger.error(f'Несуществующий статус: {homework_status}')
             )
         else:
             logger.info('Найден корректный статус домашней работы')
-        if homework_status is None:
-            raise NegativeParsStatus(
-                'Ошибка в значении homework_status: ', homework_status
-            )
         if homework_name is None:
             raise NegativeParsStatus(
                 'Ошибка в значении homework_name: ', homework_name
             )
-        verdict = HOMEWORK_STATUSES[homework_status]
+        verdict = HOMEWORK_VERDICT[homework_status]
         return f'Изменился статус проверки работы "{homework_name}". {verdict}'
     else:
         raise KeyError('ошибка')
@@ -141,23 +137,21 @@ def main():
     """Основная логика работы бота."""
     if not check_tokens():
         logger.critical('Работа рограммы приостановленна')
-        raise SystemExit
+        sys.exit()
     logger.info('Все токены доступны')
-
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     logger.info('Запущен телеграмм бот')
     current_timestamp = int(time.time())
-    try_status = 'approved'
     while True:
         try:
             response = get_api_answer(current_timestamp)
             homeworks = check_response(response)
-            if homeworks.get('status') != try_status:
+            if homeworks.get('status') != 'approved':
                 message = parse_status(homeworks)
                 send_message(bot, message)
                 logger.info('Работа еще не проверена')
             else:
-                send_message(bot, HOMEWORK_STATUSES[try_status])
+                send_message(bot, homeworks.get('status'))
         except Exception as error:
             message = (
                 f'Сбой в работе, требуется перезапустить программу: {error}'
