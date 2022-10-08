@@ -7,6 +7,7 @@ import telegram
 import requests
 
 from dotenv import load_dotenv
+from http import HTTPStatus
 
 
 load_dotenv()
@@ -29,7 +30,7 @@ HOMEWORK_VERDICT = {
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     filename='program.log',
     filemode='w',
     format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
@@ -58,12 +59,16 @@ class NegativeParsStatus(Exception):
     """Ошибка в полученном статусе."""
 
 
+class NegativeSendMessage(Exception):
+    """Ошибка при отправке сообщения."""
+
+
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-    except Exception as error:
-        logging.error(f'Ошибка при отправке сообщения: {error}')
+    except telegram.TelegramError:
+        raise NegativeSendMessage
 
 
 def get_api_answer(current_timestamp):
@@ -75,7 +80,7 @@ def get_api_answer(current_timestamp):
         headers=HEADERS,
         params=params
     )
-    if homework_statuses.status_code != 200:
+    if homework_statuses.status_code != HTTPStatus.OK:
         raise KeyError('Ошибка статус кода')
     else:
         logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
@@ -149,15 +154,20 @@ def main():
             if homeworks.get('status') != 'approved':
                 message = parse_status(homeworks)
                 send_message(bot, message)
-                logger.info('Работа еще не проверена')
+                logger.info(f'Отправлено сообщение: {message}')
             else:
-                send_message(bot, homeworks.get('status'))
+                message = HOMEWORK_VERDICT[homeworks.get('status')]
+                send_message(bot, message)
+                logger.info(f'Отправлено сообщение: {message}')
+        except NegativeSendMessage:
+            logger.error('Сообщение не было отправелно')
         except Exception as error:
             message = (
                 f'Сбой в работе, требуется перезапустить программу: {error}'
             )
             if error:
                 send_message(bot, message)
+                logging.error(f'Ошибка при отправке сообщения: {error}')
         finally:
             time.sleep(RETRY_TIME)
 
