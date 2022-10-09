@@ -24,3 +24,7 @@ class NegativeSendMessage(Exception):
 
 class NegativStatusCode(Exception):
     """Ошибка при ответе на запрос."""
+
+
+class NegativRequestException(Exception):
+    """Ошибка возникшая при запросе к серверу."""

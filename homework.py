@@ -13,7 +13,8 @@ from exceptions import (
     NegativeResponseDict,
     NegativeParsStatus,
     NegativeSendMessage,
-    NegativStatusCode
+    NegativStatusCode,
+    NegativRequestException
 )
 
 
@@ -50,19 +51,24 @@ def send_message(bot, message):
 def get_api_answer(current_timestamp):
     """Делает запрос к эндпоинту API-сервиса."""
     params = {'from_date': current_timestamp}
-    homework_statuses = requests.get(
-        ENDPOINT,
-        headers=HEADERS,
-        params=params
-    )
-    if homework_statuses.status_code != HTTPStatus.OK:
-        raise NegativStatusCode(
-            'Запрос выполнен безуспешно: '
-            f'статус ответа {homework_statuses.status_code}'
+    try:
+        homework_statuses = requests.get(
+            ENDPOINT,
+            headers=HEADERS,
+            params=params
         )
-    else:
-        logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
-        return homework_statuses.json()
+        if homework_statuses.status_code != HTTPStatus.OK:
+            raise NegativStatusCode(
+                'Запрос выполнен безуспешно: '
+                f'статус ответа {homework_statuses.status_code}'
+            )
+        else:
+            logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
+            return homework_statuses.json()
+    except requests.exceptions.RequestException as error:
+        raise NegativRequestException(
+            f'Произошла ошибка при запросе к серверу: {error}'
+        )
 
 
 def check_tokens():
