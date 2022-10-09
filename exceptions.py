@@ -28,3 +28,11 @@ class NegativStatusCode(Exception):
 
 class NegativRequestException(Exception):
     """Ошибка возникшая при запросе к серверу."""
+
+
+class NegativTypeDict(KeyError):
+    """Ошибка в передаваемом типе функции."""
+
+
+class NegitivJSONDecode(Exception):
+    """Cбой декодирования JSON."""

@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import sys
+import json
 
 import telegram
 import requests
@@ -10,11 +11,12 @@ from dotenv import load_dotenv
 from http import HTTPStatus
 from exceptions import (
     NegativeResponseStatus,
-    NegativeResponseDict,
     NegativeParsStatus,
     NegativeSendMessage,
     NegativStatusCode,
-    NegativRequestException
+    NegativRequestException,
+    NegitivJSONDecode,
+    NegativTypeDict
 )
 
 
@@ -69,6 +71,10 @@ def get_api_answer(current_timestamp):
         raise NegativRequestException(
             f'Произошла ошибка при запросе к серверу: {error}'
         )
+    except json.JSONDecodeError as error:
+        raise NegitivJSONDecode(
+            f'Произошел сбой декодирования JSON {error}'
+        )
 
 
 def check_tokens():
@@ -79,35 +85,34 @@ def check_tokens():
 
 def check_response(response):
     """Проверяет ответ API на корректность."""
-    if response is None:
-        logger.error('В ответе API произошла ошибка')
-        raise NegativeResponseDict(
-            logger.error('Произошла ошибка в полученном словаре из запроса')
-        )
-    else:
-        logger.info('Корректный API ответ')
-        return response['homeworks'][0]
+    if type(response) is not dict:
+        raise TypeError('Ответ не соответствует нужному формату')
+    if 'homeworks' not in response:
+        raise KeyError('На сервере нет домашней работы')
+    homeworks = response['homeworks']
+    if type(homeworks) is not list:
+        raise TypeError('Нет домашних работ в списке')
+    return response['homeworks'][0]
 
 
 def parse_status(homework):
     """Проверка статуса."""
-    if isinstance(homework, dict):
-        homework_name = homework.get('homework_name')
-        homework_status = homework.get('status')
-        if homework_status not in HOMEWORK_VERDICT:
-            raise NegativeResponseStatus(
-                logger.error(f'Несуществующий статус: {homework_status}')
-            )
-        else:
-            logger.info('Найден корректный статус домашней работы')
-        if homework_name is None:
-            raise NegativeParsStatus(
-                'Ошибка в значении homework_name: ', homework_name
-            )
-        verdict = HOMEWORK_VERDICT[homework_status]
-        return f'Изменился статус проверки работы "{homework_name}". {verdict}'
+    if not isinstance(homework, dict):
+        raise NegativTypeDict('Произошла ошибка в передаваемом типе функции.')
+    homework_name = homework.get('homework_name')
+    homework_status = homework.get('status')
+    if homework_status not in HOMEWORK_VERDICT:
+        raise NegativeResponseStatus(
+            logger.error(f'Несуществующий статус: {homework_status}')
+        )
     else:
-        raise KeyError('ошибка')
+        logger.info('Найден корректный статус домашней работы')
+    if homework_name is None:
+        raise NegativeParsStatus(
+            'Ошибка в значении homework_name: ', homework_name
+        )
+    verdict = HOMEWORK_VERDICT[homework_status]
+    return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
@@ -126,13 +131,12 @@ def main():
     current_timestamp = int(time.time())
     while True:
         try:
-            response = get_api_answer(current_timestamp)
-            homeworks = check_response(response)
-            if homeworks.get('status') != 'approved':
+            homeworks = check_response(get_api_answer(current_timestamp))
+            if homeworks['status'] != 'approved':
                 message = parse_status(homeworks)
                 send_message(bot, message)
             else:
-                message = HOMEWORK_VERDICT[homeworks.get('status')]
+                message = HOMEWORK_VERDICT[homeworks['status']]
                 send_message(bot, message)
         except NegativeSendMessage as error:
             logger.error(error)
