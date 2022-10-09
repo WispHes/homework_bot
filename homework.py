@@ -8,10 +8,17 @@ import requests
 
 from dotenv import load_dotenv
 from http import HTTPStatus
+from exceptions import (
+    NegativeResponseStatus,
+    NegativeResponseDict,
+    NegativeParsStatus,
+    NegativeSendMessage,
+    NegativStatusCode
+)
 
 
 load_dotenv()
-
+logger = logging.getLogger(__name__)
 
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -29,59 +36,30 @@ HOMEWORK_VERDICT = {
 }
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    filename='program.log',
-    filemode='w',
-    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
-)
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
-
-
-class NegativeResponseStatus(Exception):
-    """Ошибка в статусе домашней работы."""
-
-
-class NegativeResponseStatusCode(Exception):
-    """Ошибка в статусе кода."""
-
-
-class NegativeResponseAPI(Exception):
-    """Ошибка в API запросе."""
-
-
-class NegativeResponseDict(Exception):
-    """Ошибка в словаре полученного из запроса."""
-
-
-class NegativeParsStatus(Exception):
-    """Ошибка в полученном статусе."""
-
-
-class NegativeSendMessage(Exception):
-    """Ошибка при отправке сообщения."""
-
-
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-    except telegram.TelegramError:
-        raise NegativeSendMessage
+        logger.info(f'Отправлено сообщение: {message}')
+    except telegram.error.TelegramError as error:
+        raise NegativeSendMessage(
+            'Произошла ошибка при отправке сообщения'
+        ) from error
 
 
 def get_api_answer(current_timestamp):
     """Делает запрос к эндпоинту API-сервиса."""
-    timestamp = current_timestamp or int(time.time())
-    params = {'from_date': timestamp}
+    params = {'from_date': current_timestamp}
     homework_statuses = requests.get(
         ENDPOINT,
         headers=HEADERS,
         params=params
     )
     if homework_statuses.status_code != HTTPStatus.OK:
-        raise KeyError('Ошибка статус кода')
+        raise NegativStatusCode(
+            'Запрос выполнен безуспешно: '
+            f'статус ответа {homework_statuses.status_code}'
+        )
     else:
         logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
         return homework_statuses.json()
@@ -89,18 +67,8 @@ def get_api_answer(current_timestamp):
 
 def check_tokens():
     """Проверяет доступность переменных окружения."""
-    error_message = 'Отсутствует переменная окружения'
-    token = True
-    if PRACTICUM_TOKEN is None:
-        token = False
-        logger.error(f'{error_message} PRACTICUM_TOKEN')
-    if TELEGRAM_TOKEN is None:
-        token = False
-        logger.error(f'{error_message} TELEGRAM_TOKEN')
-    if TELEGRAM_CHAT_ID is None:
-        token = False
-        logger.error(f'{error_message} TELEGRAM_CHAT_ID')
-    return token
+    if all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
+        return True
 
 
 def check_response(response):
@@ -110,8 +78,6 @@ def check_response(response):
         raise NegativeResponseDict(
             logger.error('Произошла ошибка в полученном словаре из запроса')
         )
-    elif response == []:
-        return {}
     else:
         logger.info('Корректный API ответ')
         return response['homeworks'][0]
@@ -140,6 +106,11 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[logging.StreamHandler(stream=sys.stdout)],
+        format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
+    )
     if not check_tokens():
         logger.critical('Работа рограммы приостановленна')
         sys.exit()
@@ -154,20 +125,17 @@ def main():
             if homeworks.get('status') != 'approved':
                 message = parse_status(homeworks)
                 send_message(bot, message)
-                logger.info(f'Отправлено сообщение: {message}')
             else:
                 message = HOMEWORK_VERDICT[homeworks.get('status')]
                 send_message(bot, message)
-                logger.info(f'Отправлено сообщение: {message}')
-        except NegativeSendMessage:
-            logger.error('Сообщение не было отправелно')
+        except NegativeSendMessage as error:
+            logger.error(error)
         except Exception as error:
             message = (
-                f'Сбой в работе, требуется перезапустить программу: {error}'
+                f'Сбой в работе, требуется исправить ошибку: {error}'
             )
-            if error:
-                send_message(bot, message)
-                logging.error(f'Ошибка при отправке сообщения: {error}')
+            logger.error(message)
+            send_message(bot, message)
         finally:
             time.sleep(RETRY_TIME)
 
