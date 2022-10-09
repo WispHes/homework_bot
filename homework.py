@@ -89,10 +89,14 @@ def check_response(response):
         raise TypeError('Ответ не соответствует нужному формату')
     if 'homeworks' not in response:
         raise KeyError('На сервере нет домашней работы')
-    homeworks = response['homeworks']
+    homeworks = response.get('homeworks')
     if type(homeworks) is not list:
         raise TypeError('Нет домашних работ в списке')
-    return response['homeworks'][0]
+    if homeworks == []:
+        raise ValueError(
+            'Получен пустой список в котором должна находиться домашняя работа'
+        )
+    return homeworks[0]
 
 
 def parse_status(homework):
@@ -132,12 +136,8 @@ def main():
     while True:
         try:
             homeworks = check_response(get_api_answer(current_timestamp))
-            if homeworks['status'] != 'approved':
-                message = parse_status(homeworks)
-                send_message(bot, message)
-            else:
-                message = HOMEWORK_VERDICT[homeworks['status']]
-                send_message(bot, message)
+            message = parse_status(homeworks)
+            send_message(bot, message)
         except NegativeSendMessage as error:
             logger.error(error)
         except Exception as error:
