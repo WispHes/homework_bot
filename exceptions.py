@@ -1,26 +1,26 @@
-class NegativeResponseStatus(Exception):
+class NegativeResponseStatusError(Exception):
     """Ошибка в статусе домашней работы."""
 
 
-class NegativeParsStatus(Exception):
+class NegativeParsStatusError(Exception):
     """Ошибка в полученном статусе."""
 
 
-class NegativeSendMessage(Exception):
+class NegativeSendMessageError(Exception):
     """Ошибка при отправке сообщения."""
 
 
-class NegativStatusCode(Exception):
+class NegativStatusCodeError(Exception):
     """Ошибка при ответе на запрос."""
 
 
-class NegativRequestException(Exception):
+class NegativRequestExceptionError(Exception):
     """Ошибка возникшая при запросе к серверу."""
 
 
-class NegativTypeDict(KeyError):
+class NegativTypeDictError(KeyError):
     """Ошибка в передаваемом типе функции."""
 
 
-class NegitivJSONDecode(Exception):
+class NegitivJSONDecodeError(Exception):
     """Cбой декодирования JSON."""
