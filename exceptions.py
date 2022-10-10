@@ -1,7 +1,3 @@
-class NegativeResponseStatusError(Exception):
-    """Ошибка в статусе домашней работы."""
-
-
 class NegativeSendMessageError(Exception):
     """Ошибка при отправке сообщения."""
 
