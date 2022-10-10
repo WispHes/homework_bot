@@ -8,8 +8,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import (NegativeResponseStatusError, NegativeSendMessageError,
-                        NegativStatusCodeError)
+from exceptions import NegativeSendMessageError, NegativStatusCodeError
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -77,28 +76,24 @@ def check_response(response):
     """Проверяет ответ API на корректность."""
     if not isinstance(response, dict):
         raise TypeError('Ответ не соответствует нужному формату')
-    if 'homeworks' not in response:
-        raise KeyError('На сервере нет домашней работы')
+    if 'homeworks' and 'current_date' not in response:
+        raise KeyError('Ответ не содержит ключ нужного ключа')
     homeworks = response.get('homeworks')
     if type(homeworks) is not list:
-        raise TypeError('Нет домашних работ в списке')
-    if homeworks == []:
-        raise ValueError(
-            'Получен пустой список в котором должна находиться домашняя работа'
-        )
-    return homeworks[0]
+        raise TypeError('Ключ "homeworks" не содержит список')
+    return homeworks
 
 
 def parse_status(homework):
     """Проверка статуса."""
     if not isinstance(homework, dict):
-        raise KeyError(
+        raise TypeError(
             'Произошла ошибка в передаваемом типе функции.'
         )
     homework_name = homework.get('homework_name')
     homework_status = homework.get('status')
     if homework_status not in HOMEWORK_VERDICT:
-        raise NegativeResponseStatusError(
+        raise KeyError(
             logger.error(f'Несуществующий статус: {homework_status}')
         )
     if homework_name is None:
@@ -126,7 +121,7 @@ def main():
     while True:
         try:
             homeworks = check_response(get_api_answer(current_timestamp))
-            message = parse_status(homeworks)
+            message = parse_status(homeworks[0])
             send_message(bot, message)
         except NegativeSendMessageError as error:
             logger.error(error)
@@ -135,7 +130,12 @@ def main():
                 f'Сбой в работе, требуется исправить ошибку: {error}'
             )
             logger.error(message)
-            send_message(bot, message)
+            try:
+                send_message(bot, message)
+            except Exception as error:
+                logger.error(
+                    f'Сбой в отправке сообщения: {error}'
+                )
         finally:
             time.sleep(RETRY_TIME)
 
