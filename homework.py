@@ -132,7 +132,7 @@ def main():
             logger.error(message)
             try:
                 send_message(bot, message)
-            except telegram.error.TelegramError as error:
+            except NegativeSendMessageError as error:
                 logger.error(
                     f'Сбой в отправке сообщения: {error}'
                 )
