@@ -58,26 +58,28 @@ def get_api_answer(current_timestamp):
         logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
         return homework_statuses.json()
     except requests.exceptions.JSONDecodeError as error:
-        raise ValueError(
-            f'Произошел сбой декодирования JSON {error}'
+        raise ConnectionError(
+            f'Произошла ошибка при запросе к серверу: {error}'
         )
     except requests.exceptions.RequestException as error:
-        raise ValueError(
+        raise ConnectionError(
             f'Произошла ошибка при запросе к серверу: {error}'
         )
 
 
 def check_tokens():
     """Проверяет доступность переменных окружения."""
-    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
+    return all((PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID))
 
 
 def check_response(response):
     """Проверяет ответ API на корректность."""
     if not isinstance(response, dict):
         raise TypeError('Ответ не соответствует нужному формату')
-    if 'homeworks' and 'current_date' not in response:
-        raise KeyError('Ответ не содержит ключ нужного ключа')
+    if 'homeworks' not in response:
+        raise KeyError('В ответе отсутствует ключ "homeworks"')
+    if 'current_date' not in response:
+        logger.info('В ответе отсутствует ключ "current_date"')
     homeworks = response.get('homeworks')
     if type(homeworks) is not list:
         raise TypeError('Ключ "homeworks" не содержит список')
