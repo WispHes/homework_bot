@@ -57,10 +57,6 @@ def get_api_answer(current_timestamp):
             )
         logger.info('Запрос к эндпоинту API-сервиса прошел успешно')
         return homework_statuses.json()
-    except requests.exceptions.JSONDecodeError as error:
-        raise ConnectionError(
-            f'Произошла ошибка при запросе к серверу: {error}'
-        )
     except requests.exceptions.RequestException as error:
         raise ConnectionError(
             f'Произошла ошибка при запросе к серверу: {error}'
