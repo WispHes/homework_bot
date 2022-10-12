@@ -126,7 +126,6 @@ def main():
             homeworks = check_response(response)
             message = parse_status(homeworks[0])
             send_message(bot, message)
-            current_timestamp = response.get('current_date')
         except NegativeSendMessageError as error:
             logger.error(error)
         except Exception as error:
