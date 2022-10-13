@@ -74,14 +74,12 @@ def check_response(response):
         raise TypeError('Ответ не соответствует нужному формату')
     if 'homeworks' not in response:
         raise KeyError('В ответе отсутствует ключ "homeworks"')
-    if 'current_date' not in response:
-        logger.error('В ответе отсутствует ключ "current_date"')
     if not isinstance(response.get('current_date'), int):
         raise TypeError(
             'Произошла ошибка в передаваемом типе ключа.'
         )
     homeworks = response.get('homeworks')
-    if type(homeworks) is not list:
+    if not isinstance(homeworks, list):
         raise TypeError('Ключ "homeworks" не содержит список')
     return homeworks
 
@@ -126,7 +124,10 @@ def main():
             homeworks = check_response(response)
             message = parse_status(homeworks[0])
             send_message(bot, message)
-            current_timestamp = response.get('current_date')
+            if 'current_date' not in response:
+                logger.error('В ответе отсутствует ключ "current_date"')
+            else:
+                current_timestamp = response.get('current_date')
         except NegativeSendMessageError as error:
             logger.error(error)
         except Exception as error:
