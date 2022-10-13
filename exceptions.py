@@ -4,3 +4,7 @@ class NegativeSendMessageError(Exception):
 
 class NegativStatusCodeError(Exception):
     """Ошибка при ответе на запрос."""
+
+
+class NotFoundDateError(KeyError):
+    """Ошибка при получении даты из запроса."""

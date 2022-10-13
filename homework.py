@@ -8,7 +8,8 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import NegativeSendMessageError, NegativStatusCodeError
+from exceptions import (NegativeSendMessageError, NegativStatusCodeError,
+                        NotFoundDateError)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -74,6 +75,8 @@ def check_response(response):
         raise TypeError('Ответ не соответствует нужному формату')
     if 'homeworks' not in response:
         raise KeyError('В ответе отсутствует ключ "homeworks"')
+    if 'current_date' not in response:
+        raise NotFoundDateError('В ответе отсутствует ключ "current_date"')
     if not isinstance(response.get('current_date'), int):
         raise TypeError(
             'Произошла ошибка в передаваемом типе ключа.'
@@ -124,10 +127,9 @@ def main():
             homeworks = check_response(response)
             message = parse_status(homeworks[0])
             send_message(bot, message)
-            if 'current_date' not in response:
-                logger.error('В ответе отсутствует ключ "current_date"')
-            else:
-                current_timestamp = response.get('current_date')
+            current_timestamp = response.get('current_date')
+        except NotFoundDateError as error:
+            logger.error(error)
         except NegativeSendMessageError as error:
             logger.error(error)
         except Exception as error:
