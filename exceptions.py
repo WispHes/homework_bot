@@ -1,8 +1,8 @@
-class AllBaseError(Exception):
-    """Общий баззоый класс для кастомных ошибок."""
+class NoForSendingInTelegramError(Exception):
+    """Общий баззоый класс не для отправки в телеграм."""
 
 
-class NegativeSendMessageError(AllBaseError):
+class NegativeSendMessageError(NoForSendingInTelegramError):
     """Ошибка при отправке сообщения."""
 
 
@@ -10,5 +10,5 @@ class NegativStatusCodeError(Exception):
     """Ошибка при ответе на запрос."""
 
 
-class NotFoundDateError(AllBaseError):
+class NotFoundDateError(NoForSendingInTelegramError):
     """Ошибка при получении даты из запроса."""

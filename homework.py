@@ -8,8 +8,8 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import (AllBaseError, NegativeSendMessageError,
-                        NegativStatusCodeError, NotFoundDateError)
+from exceptions import (NegativeSendMessageError, NegativStatusCodeError,
+                        NoForSendingInTelegramError, NotFoundDateError)
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -128,7 +128,7 @@ def main():
             message = parse_status(homeworks[0])
             send_message(bot, message)
             current_timestamp = response.get('current_date')
-        except AllBaseError as error:
+        except NoForSendingInTelegramError as error:
             logger.error(error)
         except Exception as error:
             message = (
